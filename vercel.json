@@ -4,20 +4,21 @@
     {
       "src": "src/server.ts",
       "use": "@vercel/node"
+    },
+    {
+      "src": "public/**",
+      "use": "@vercel/static"
     }
   ],
   "routes": [
+    { "handle": "filesystem" },
     {
       "src": "/api/(.*)",
       "dest": "src/server.ts"
     },
     {
-      "src": "/(.*\\.(html|css|js|ico|png|jpg|svg))$",
+      "src": "/(.*)",
       "dest": "public/$1"
-    },
-    {
-      "src": "/",
-      "dest": "public/index.html"
     }
   ]
 }
