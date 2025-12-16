@@ -29,9 +29,6 @@ app.post('/api/analyze', async (req, res) => {
       return res.status(400).json({ error: 'Both fighter names are required' });
     }
 
-    console.log(`Analyzing: ${fighter1} vs ${fighter2}`);
-    console.log(`Mode: ${mode}`);
-
     let prompt = '';
 
     if (mode === 'quick') {
@@ -63,7 +60,6 @@ Cover:
 
 Be direct and analytical. This is for entertainment purposes only.`;
     } else {
-      // Full breakdown
       prompt = `You are an expert UFC analyst. Provide a detailed breakdown of this matchup:
 
 ${fighter1} vs ${fighter2}
@@ -95,12 +91,7 @@ Be detailed but engaging. Write like you're breaking it down for a hardcore UFC 
     const message = await anthropic.messages.create({
       model: 'claude-sonnet-4-20250514',
       max_tokens: 1500,
-      messages: [
-        {
-          role: 'user',
-          content: prompt
-        }
-      ]
+      messages: [{ role: 'user', content: prompt }]
     });
 
     const responseText = message.content
@@ -108,27 +99,20 @@ Be detailed but engaging. Write like you're breaking it down for a hardcore UFC 
       .map(block => block.text)
       .join('\n');
 
-    res.json({
-      analysis: responseText,
-      fighter1,
-      fighter2,
-      mode
-    });
+    res.json({ analysis: responseText, fighter1, fighter2, mode });
 
   } catch (error) {
     console.error('Error:', error);
-    res.status(500).json({ 
-      error: 'Failed to analyze fight',
-      message: error.message 
-    });
+    res.status(500).json({ error: 'Failed to analyze fight', message: error.message });
   }
 });
 
-// Serve frontend
-app.get('*', (req, res) => {
+app.get('/', (req, res) => {
   res.sendFile(path.join(__dirname, '../public/index.html'));
 });
 
-app.listen(PORT, () => {
-  console.log(`🥊 UFC Analyzer running at http://localhost:${PORT}`);
-});
+if (process.env.NODE_ENV !== 'production') {
+  app.listen(PORT, () => console.log(`🥊 UFC Analyzer running at http://localhost:${PORT}`));
+}
+
+export default app;
