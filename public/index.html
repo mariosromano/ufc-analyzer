@@ -1,0 +1,570 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>UFC Fight Analyzer</title>
+  <style>
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+    
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: linear-gradient(135deg, #1a1a1a 0%, #2d1f1f 100%);
+      min-height: 100vh;
+      color: #fff;
+      padding: 20px;
+    }
+    
+    .container {
+      max-width: 800px;
+      margin: 0 auto;
+    }
+    
+    header {
+      text-align: center;
+      margin-bottom: 40px;
+    }
+    
+    h1 {
+      font-size: 2.8rem;
+      margin-bottom: 10px;
+      text-transform: uppercase;
+      letter-spacing: 2px;
+    }
+    
+    .title-ufc {
+      color: #d20a0a;
+    }
+    
+    .title-analyzer {
+      color: #ffd700;
+    }
+    
+    .subtitle {
+      color: #888;
+      font-size: 1.1rem;
+    }
+    
+    .input-section {
+      background: rgba(255,255,255,0.05);
+      border-radius: 16px;
+      padding: 30px;
+      margin-bottom: 30px;
+      border: 1px solid rgba(255,255,255,0.1);
+    }
+    
+    .fighters-row {
+      display: grid;
+      grid-template-columns: 1fr auto 1fr;
+      gap: 20px;
+      align-items: center;
+      margin-bottom: 20px;
+    }
+    
+    .vs {
+      font-size: 1.5rem;
+      font-weight: bold;
+      color: #d20a0a;
+    }
+    
+    .input-group {
+      margin-bottom: 20px;
+    }
+    
+    .autocomplete-wrapper {
+      position: relative;
+    }
+    
+    .suggestions {
+      position: absolute;
+      top: 100%;
+      left: 0;
+      right: 0;
+      background: #1a1a1a;
+      border: 1px solid rgba(255,255,255,0.2);
+      border-radius: 8px;
+      margin-top: 4px;
+      max-height: 250px;
+      overflow-y: auto;
+      z-index: 100;
+      display: none;
+    }
+    
+    .suggestions.active {
+      display: block;
+    }
+    
+    .suggestion-item {
+      padding: 12px 16px;
+      cursor: pointer;
+      transition: background 0.15s ease;
+    }
+    
+    .suggestion-item:hover {
+      background: #d20a0a;
+    }
+    
+    label {
+      display: block;
+      margin-bottom: 8px;
+      font-weight: 500;
+      color: #ccc;
+      text-transform: uppercase;
+      font-size: 0.85rem;
+      letter-spacing: 1px;
+    }
+    
+    input, textarea {
+      width: 100%;
+      padding: 14px 18px;
+      border-radius: 8px;
+      border: 2px solid rgba(255,255,255,0.1);
+      background: rgba(0,0,0,0.3);
+      color: #fff;
+      font-size: 1.1rem;
+      transition: all 0.3s ease;
+    }
+    
+    input:focus, textarea:focus {
+      outline: none;
+      border-color: #d20a0a;
+      background: rgba(0,0,0,0.5);
+    }
+    
+    input::placeholder, textarea::placeholder {
+      color: #666;
+    }
+    
+    textarea {
+      resize: vertical;
+      min-height: 60px;
+    }
+    
+    .mode-selector {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 10px;
+      margin-bottom: 25px;
+    }
+    
+    .mode-btn {
+      padding: 12px;
+      border-radius: 8px;
+      border: 2px solid rgba(255,255,255,0.2);
+      background: transparent;
+      color: #aaa;
+      font-size: 0.9rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      text-transform: uppercase;
+    }
+    
+    .mode-btn:hover {
+      border-color: #d20a0a;
+      color: #fff;
+    }
+    
+    .mode-btn.active {
+      border-color: #d20a0a;
+      background: #d20a0a;
+      color: #fff;
+    }
+    
+    .analyze-btn {
+      width: 100%;
+      padding: 18px;
+      border-radius: 8px;
+      border: none;
+      background: linear-gradient(90deg, #d20a0a, #ff4444);
+      color: #fff;
+      font-size: 1.2rem;
+      font-weight: 700;
+      cursor: pointer;
+      text-transform: uppercase;
+      letter-spacing: 2px;
+      transition: transform 0.2s ease, box-shadow 0.2s ease;
+    }
+    
+    .analyze-btn:hover:not(:disabled) {
+      transform: translateY(-2px);
+      box-shadow: 0 10px 30px rgba(210, 10, 10, 0.4);
+    }
+    
+    .analyze-btn:disabled {
+      opacity: 0.6;
+      cursor: not-allowed;
+    }
+    
+    .loading {
+      display: none;
+      text-align: center;
+      padding: 40px;
+    }
+    
+    .loading.active {
+      display: block;
+    }
+    
+    .spinner {
+      width: 50px;
+      height: 50px;
+      border: 4px solid rgba(255,255,255,0.1);
+      border-top-color: #d20a0a;
+      border-radius: 50%;
+      animation: spin 1s linear infinite;
+      margin: 0 auto 20px;
+    }
+    
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+    
+    .result-section {
+      display: none;
+    }
+    
+    .result-section.active {
+      display: block;
+    }
+    
+    .result-header {
+      text-align: center;
+      margin-bottom: 25px;
+      padding: 20px;
+      background: rgba(210, 10, 10, 0.2);
+      border-radius: 12px;
+      border: 1px solid rgba(210, 10, 10, 0.3);
+    }
+    
+    .matchup {
+      font-size: 1.5rem;
+      font-weight: 700;
+      text-transform: uppercase;
+    }
+    
+    .matchup-vs {
+      color: #d20a0a;
+      margin: 0 10px;
+    }
+    
+    .analysis-card {
+      background: rgba(255,255,255,0.05);
+      border-radius: 12px;
+      padding: 25px;
+      border: 1px solid rgba(255,255,255,0.1);
+      line-height: 1.8;
+    }
+    
+    .analysis-content {
+      white-space: pre-wrap;
+      color: #e0e0e0;
+    }
+    
+    .analysis-content strong {
+      color: #ffd700;
+    }
+    
+    .error {
+      background: rgba(210, 10, 10, 0.2);
+      border: 1px solid #d20a0a;
+      border-radius: 8px;
+      padding: 15px;
+      margin-top: 20px;
+      display: none;
+    }
+    
+    .error.active {
+      display: block;
+    }
+    
+    .new-fight-btn {
+      display: block;
+      margin: 25px auto 0;
+      padding: 12px 30px;
+      border-radius: 8px;
+      border: 2px solid #ffd700;
+      background: transparent;
+      color: #ffd700;
+      font-size: 1rem;
+      font-weight: 600;
+      cursor: pointer;
+      text-transform: uppercase;
+      transition: all 0.2s ease;
+    }
+    
+    .new-fight-btn:hover {
+      background: #ffd700;
+      color: #1a1a1a;
+    }
+    
+    @media (max-width: 600px) {
+      .fighters-row {
+        grid-template-columns: 1fr;
+        text-align: center;
+      }
+      
+      .vs {
+        padding: 10px 0;
+      }
+      
+      .mode-selector {
+        grid-template-columns: 1fr;
+      }
+      
+      h1 {
+        font-size: 2rem;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <header>
+      <h1><span class="title-ufc">UFC</span> <span class="title-analyzer">Fight Analyzer</span></h1>
+      <p class="subtitle">AI-powered fight breakdowns and predictions</p>
+    </header>
+    
+    <div class="input-section" id="inputSection">
+      <div class="fighters-row">
+        <div class="input-group">
+          <label for="fighter1">Fighter 1</label>
+          <div class="autocomplete-wrapper">
+            <input 
+              type="text" 
+              id="fighter1" 
+              placeholder="Start typing..."
+              autocomplete="off"
+            >
+            <div class="suggestions" id="suggestions1"></div>
+          </div>
+        </div>
+        
+        <span class="vs">VS</span>
+        
+        <div class="input-group">
+          <label for="fighter2">Fighter 2</label>
+          <div class="autocomplete-wrapper">
+            <input 
+              type="text" 
+              id="fighter2" 
+              placeholder="Start typing..."
+              autocomplete="off"
+            >
+            <div class="suggestions" id="suggestions2"></div>
+          </div>
+        </div>
+      </div>
+      
+      <div class="input-group">
+        <label for="context">Context (optional)</label>
+        <textarea 
+          id="context" 
+          placeholder="e.g. Title fight, 5 rounds, Jones coming off layoff..."
+        ></textarea>
+      </div>
+      
+      <label>Analysis Type</label>
+      <div class="mode-selector">
+        <button class="mode-btn active" data-mode="full">Full Breakdown</button>
+        <button class="mode-btn" data-mode="quick">Quick Pick</button>
+        <button class="mode-btn" data-mode="betting">Betting Angle</button>
+      </div>
+      
+      <button class="analyze-btn" id="analyzeBtn" onclick="analyze()">
+        Analyze Fight
+      </button>
+      
+      <div class="error" id="error"></div>
+    </div>
+    
+    <div class="loading" id="loading">
+      <div class="spinner"></div>
+      <p>Breaking down the matchup...</p>
+    </div>
+    
+    <div class="result-section" id="results">
+      <div class="result-header">
+        <div class="matchup">
+          <span id="resultFighter1"></span>
+          <span class="matchup-vs">VS</span>
+          <span id="resultFighter2"></span>
+        </div>
+      </div>
+      
+      <div class="analysis-card">
+        <div class="analysis-content" id="analysisContent"></div>
+      </div>
+      
+      <button class="new-fight-btn" onclick="newFight()">Analyze Another Fight</button>
+    </div>
+  </div>
+  
+  <script>
+    // Top 50 UFC fighters across weight classes
+    const TOP_FIGHTERS = [
+      // Heavyweights
+      "Jon Jones", "Tom Aspinall", "Stipe Miocic", "Ciryl Gane", "Sergei Pavlovich",
+      "Curtis Blaydes", "Alexander Volkov", "Jailton Almeida", "Derrick Lewis",
+      // Light Heavyweights
+      "Alex Pereira", "Jamahal Hill", "Jiri Prochazka", "Magomed Ankalaev", "Jan Blachowicz",
+      "Khalil Rountree", "Nikita Krylov",
+      // Middleweights
+      "Dricus Du Plessis", "Sean Strickland", "Israel Adesanya", "Robert Whittaker", 
+      "Khamzat Chimaev", "Jared Cannonier", "Marvin Vettori", "Paulo Costa",
+      // Welterweights
+      "Belal Muhammad", "Leon Edwards", "Kamaru Usman", "Colby Covington", 
+      "Shavkat Rakhmonov", "Jack Della Maddalena", "Gilbert Burns",
+      // Lightweights
+      "Islam Makhachev", "Arman Tsarukyan", "Charles Oliveira", "Justin Gaethje",
+      "Dustin Poirier", "Max Holloway", "Michael Chandler", "Beneil Dariush",
+      // Featherweights
+      "Ilia Topuria", "Alexander Volkanovski", "Diego Lopes", "Yair Rodriguez",
+      "Brian Ortega", "Josh Emmett", "Arnold Allen",
+      // Bantamweights
+      "Merab Dvalishvili", "Sean O'Malley", "Umar Nurmagomedov", "Cory Sandhagen",
+      "Petr Yan", "Marlon Vera", "Deiveson Figueiredo",
+      // Flyweights
+      "Alexandre Pantoja", "Brandon Royval", "Brandon Moreno", "Amir Albazi",
+      // Women
+      "Valentina Shevchenko", "Zhang Weili", "Amanda Nunes", "Rose Namajunas"
+    ];
+
+    let selectedMode = 'full';
+    
+    // Autocomplete setup
+    function setupAutocomplete(inputId, suggestionsId) {
+      const input = document.getElementById(inputId);
+      const suggestions = document.getElementById(suggestionsId);
+      
+      input.addEventListener('input', () => {
+        const value = input.value.toLowerCase();
+        if (value.length === 0) {
+          suggestions.classList.remove('active');
+          return;
+        }
+        
+        const matches = TOP_FIGHTERS.filter(f => 
+          f.toLowerCase().includes(value)
+        ).slice(0, 8);
+        
+        if (matches.length > 0) {
+          suggestions.innerHTML = matches.map(name => 
+            `<div class="suggestion-item">${name}</div>`
+          ).join('');
+          suggestions.classList.add('active');
+          
+          // Add click handlers
+          suggestions.querySelectorAll('.suggestion-item').forEach(item => {
+            item.addEventListener('click', () => {
+              input.value = item.textContent;
+              suggestions.classList.remove('active');
+            });
+          });
+        } else {
+          suggestions.classList.remove('active');
+        }
+      });
+      
+      input.addEventListener('blur', () => {
+        setTimeout(() => suggestions.classList.remove('active'), 200);
+      });
+      
+      input.addEventListener('focus', () => {
+        if (input.value.length > 0) {
+          input.dispatchEvent(new Event('input'));
+        }
+      });
+    }
+    
+    setupAutocomplete('fighter1', 'suggestions1');
+    setupAutocomplete('fighter2', 'suggestions2');
+    
+    // Mode selection
+    document.querySelectorAll('.mode-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        document.querySelectorAll('.mode-btn').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        selectedMode = btn.dataset.mode;
+      });
+    });
+    
+    async function analyze() {
+      const fighter1 = document.getElementById('fighter1').value.trim();
+      const fighter2 = document.getElementById('fighter2').value.trim();
+      const context = document.getElementById('context').value.trim();
+      
+      if (!fighter1 || !fighter2) {
+        showError('Please enter both fighter names.');
+        return;
+      }
+      
+      // UI state
+      document.getElementById('analyzeBtn').disabled = true;
+      document.getElementById('inputSection').style.display = 'none';
+      document.getElementById('loading').classList.add('active');
+      document.getElementById('results').classList.remove('active');
+      document.getElementById('error').classList.remove('active');
+      
+      try {
+        const response = await fetch('/api/analyze', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ fighter1, fighter2, context, mode: selectedMode })
+        });
+        
+        if (!response.ok) {
+          const err = await response.json();
+          throw new Error(err.error || 'Request failed');
+        }
+        
+        const data = await response.json();
+        
+        // Populate results
+        document.getElementById('resultFighter1').textContent = fighter1;
+        document.getElementById('resultFighter2').textContent = fighter2;
+        
+        // Format the analysis (convert markdown-style bold to HTML)
+        let formatted = data.analysis
+          .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
+        document.getElementById('analysisContent').innerHTML = formatted;
+        
+        document.getElementById('results').classList.add('active');
+        
+      } catch (err) {
+        showError(err.message);
+        document.getElementById('inputSection').style.display = 'block';
+      } finally {
+        document.getElementById('analyzeBtn').disabled = false;
+        document.getElementById('loading').classList.remove('active');
+      }
+    }
+    
+    function newFight() {
+      document.getElementById('results').classList.remove('active');
+      document.getElementById('inputSection').style.display = 'block';
+      document.getElementById('fighter1').value = '';
+      document.getElementById('fighter2').value = '';
+      document.getElementById('context').value = '';
+      document.getElementById('fighter1').focus();
+    }
+    
+    function showError(message) {
+      const errorEl = document.getElementById('error');
+      errorEl.textContent = message;
+      errorEl.classList.add('active');
+    }
+    
+    // Enter key to submit
+    document.getElementById('fighter2').addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') {
+        analyze();
+      }
+    });
+  </script>
+</body>
+</html>
